@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f9d55">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<title>Nuestro Espacio</title>
+<style>
+:root{--bg:#f3faf5;--card:#fff;--tx:#16301f;--mut:#69846f;--g:#1f9d55;--gd:#17803f;--g2:#e2f4e8;--bd:#d6e9dc;--red:#d64545;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1912;--card:#15261c;--tx:#e5f4ea;--mut:#8cab97;--g:#34c070;--gd:#2aa75f;--g2:#1b3526;--bd:#25402f;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--g);color:#fff;padding:calc(16px + env(safe-area-inset-top,0px)) 16px 14px;display:flex;align-items:center;gap:8px}
+header h1{font-size:1.25rem;margin:0;flex:1}
+header small{opacity:.9;display:block;font-weight:400;font-size:.8rem}
+.hb{background:rgba(255,255,255,.2);color:#fff;border:0;border-radius:10px;padding:8px 10px;font-size:1rem;cursor:pointer}
+main{max-width:720px;margin:0 auto;padding:14px 14px 100px}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--bd);display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));z-index:5}
+nav button{flex:1;border:0;background:none;color:var(--mut);padding:6px 2px;font-size:.72rem;border-radius:12px;cursor:pointer;position:relative}
+nav button span{display:block;font-size:1.35rem}
+nav button.on{color:var(--g);background:var(--g2);font-weight:600}
+.bdg{position:absolute;top:2px;right:18%;background:var(--red);color:#fff;border-radius:99px;font-size:.65rem;padding:1px 6px;font-style:normal}
+@media(min-width:760px){nav{position:static;max-width:720px;margin:12px auto 0;border:1px solid var(--bd);border-radius:16px;padding:6px}main{padding-bottom:40px}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:12px;margin-bottom:12px}
+.add{display:flex;gap:8px;flex-wrap:wrap}
+input,select,textarea{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:10px;min-width:0}
+input[type=text],input[type=email],input[type=password],textarea{flex:1 1 140px}
+input.q{flex:0 0 72px}
+.btn{background:var(--g);color:#fff;border:0;border-radius:10px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--gd)}
+.ghost{background:none;border:0;color:var(--mut);cursor:pointer;font-size:1rem;padding:6px}
+.row{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--bd)}
+.row:last-child{border-bottom:0}
+.row .t{flex:1;min-width:0;overflow-wrap:anywhere}
+.row.done .t{text-decoration:line-through;color:var(--mut)}
+.row input[type=checkbox]{width:22px;height:22px;accent-color:var(--g)}
+.meta{font-size:.76rem;color:var(--mut)}
+.tag{background:var(--g2);color:var(--gd);border-radius:99px;padding:1px 9px;font-size:.74rem}
+.late{color:var(--red);font-weight:600}
+h2{font-size:.95rem;color:var(--mut);margin:16px 4px 8px;text-transform:uppercase;letter-spacing:.04em}
+.empty{text-align:center;color:var(--mut);padding:22px 8px}
+.note{border-left:4px solid var(--g);padding:8px 10px;margin:8px 0;background:var(--g2);border-radius:0 10px 10px 0}
+.note.urg{border-color:var(--red)}
+a{color:var(--g)}
+.login{max-width:380px;margin:40px auto}.login .add{flex-direction:column}
+#toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:12px 16px;border-radius:14px;z-index:20;max-width:92%;display:none;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<header>
+  <h1>🌿 Nuestro Espacio<small id="who"></small></h1>
+  <button class="hb" id="team" title="Mi pareja" hidden>👥</button>
+  <button class="hb" id="bell" title="Activar notificaciones" hidden>🔔</button>
+  <button class="hb" id="out" title="Salir" hidden>⎋</button>
+</header>
+<main id="main"></main>
+<nav id="nav" hidden></nav>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendEmailVerification,sendPasswordResetEmail,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getFirestore,collection,doc,getDoc,writeBatch,setDoc,addDoc,updateDoc,deleteDoc,onSnapshot,query,orderBy} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ====== PEGA AQUI TU CONFIGURACION DE FIREBASE ======
+const firebaseConfig = {
+  apiKey: "AIzaSyB31uzZ-_M_E-lF0f41uZ6bC-X4h5fZB7I",
+  authDomain: "espacio-17f63.firebaseapp.com",
+  projectId: "espacio-17f63",
+  storageBucket: "espacio-17f63.firebasestorage.app",
+  messagingSenderId: "879392677121",
+  appId: "1:879392677121:web:5da34a4dc66b06f425cf00"
+};
+// =====================================================
+
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
+const TABS=[['shop','🛒','Mercado'],['notice','💌','Avisos'],['task','✅','Tareas'],['rem','⏰','Recordar']];
+let myEmail='',spaceData=null,started=false,me=null,names={},memberIds=[],items=[],tab='shop',ready=false,editing=null,unsubs=[],timer=null;
+let seen=+(localStorage.getItem('seen')||0),fired={};
+try{fired=JSON.parse(localStorage.getItem('fired')||'{}')}catch(e){}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nm=id=>id===me?'Tú':(names[id]||'Tu pareja');
+const fmt=t=>new Date(t).toLocaleString('es',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',5000)}
+async function notify(m){
+  toast(m);
+  try{if(Notification.permission==='granted'){const r=await navigator.serviceWorker.getRegistration();
+    r?r.showNotification('Nuestro Espacio',{body:m,icon:'icon.svg'}):new Notification('Nuestro Espacio',{body:m})}}catch(e){}
+  try{navigator.vibrate&&navigator.vibrate(120)}catch(e){}
+}
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+$('#bell').onclick=()=>{try{Notification.requestPermission().then(p=>toast(p==='granted'?'Notificaciones activadas ✔':'Notificaciones desactivadas'))}catch(e){toast('Este navegador no permite notificaciones')}};
+$('#out').onclick=()=>signOut(auth);
+$('#team').onclick=()=>{tab='team';editing=null;render()};
+
+const unseen=()=>items.filter(i=>i.type==='notice'&&i.by!==me&&i.ts>seen).length;
+function nav(){
+  $('#nav').innerHTML=TABS.map(t=>{const b=t[0]==='notice'&&unseen()?`<i class="bdg">${unseen()}</i>`:'';
+    return `<button data-tab="${t[0]}" class="${tab===t[0]?'on':''}"><span>${t[1]}</span>${t[2]}${b}</button>`}).join('');
+}
+$('#nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;tab=b.dataset.tab;editing=null;
+  if(tab==='notice'){seen=Date.now();localStorage.setItem('seen',seen)}render()};
+
+const textCell=i=>editing===i.id?`<input type="text" id="ed" value="${esc(i.text)}" data-id="${i.id}">`:`<span data-edit="${i.id}">${esc(i.text)}</span>`;
+const chk=i=>`<input type="checkbox" data-tog="${i.id}" ${i.done?'checked':''}>`;
+const del=i=>`<button class="ghost" data-del="${i.id}" title="Eliminar">🗑</button>`;
+const rowShop=i=>`<div class="row${i.done?' done':''}">${chk(i)}<div class="t">${textCell(i)}${i.qty?` <span class="tag">× ${esc(i.qty)}</span>`:''}<div class="meta">${nm(i.by)}${i.done?' · comprado':''}</div></div>${del(i)}</div>`;
+const rowTask=i=>`<div class="row${i.done?' done':''}">${chk(i)}<div class="t">${textCell(i)}<div class="meta">Para <b>${esc(nm(i.to))}</b> · creada por ${esc(nm(i.by))}</div></div>${del(i)}</div>`;
+const rowRem=i=>{const late=!i.done&&i.due<Date.now();
+  return `<div class="row${i.done?' done':''}">${chk(i)}<div class="t">${textCell(i)}<div class="meta ${late?'late':''}">⏰ ${fmt(i.due)}${late?' · vencido':''} · ${i.shared?'compartido con ambos':'solo '+esc(nm(i.by))}${i.by!==me?' · de '+esc(nm(i.by)):''}</div></div>${del(i)}</div>`};
+const list=(a,f,e)=>a.length?a.map(f).join(''):`<div class="empty">${e}</div>`;
+
+let mode='in';
+function loginView(msg,ok){
+  $('#nav').hidden=$('#bell').hidden=$('#out').hidden=$('#team').hidden=true;$('#who').textContent='';
+  const reg=mode==='up';
+  $('#main').innerHTML=`<div class="card login"><h2 style="margin-top:0">${reg?'Crear cuenta':'Entrar'}</h2><div class="add">
+  <input type="email" id="em" placeholder="Correo electrónico" autocomplete="username">
+  <input type="password" id="pw" placeholder="Contraseña (mínimo 6 caracteres)" autocomplete="${reg?'new-password':'current-password'}">
+  <button class="btn" data-login="1">${reg?'Crear cuenta':'Entrar'}</button></div>
+  ${msg?`<p class="${ok?'meta':'late'}">${esc(msg)}</p>`:''}
+  <p class="meta">${reg?'¿Ya tienes cuenta? <a href="#" data-mode="in">Entrar</a>':'¿No tienes cuenta? <a href="#" data-mode="up">Crear cuenta</a> · <a href="#" data-reset="1">Olvidé mi contraseña</a>'}</p></div>`;
+}
+async function doLogin(){
+  const em=$('#em').value.trim(),pw=$('#pw').value;if(!em||!pw)return;
+  try{
+    if(mode==='up'){const c=await createUserWithEmailAndPassword(auth,em,pw);await sendEmailVerification(c.user)}
+    else await signInWithEmailAndPassword(auth,em,pw);
+  }catch(e){
+    const m={'auth/email-already-in-use':'Ese correo ya tiene cuenta. Usa «Entrar».','auth/weak-password':'La contraseña debe tener al menos 6 caracteres.','auth/invalid-email':'Correo no válido.'}[e.code]||(mode==='up'?'No se pudo crear la cuenta.':'Correo o contraseña incorrectos.');
+    loginView(m)}
+}
+async function doReset(){
+  const em=$('#em').value.trim();
+  if(!em){loginView('Escribe tu correo arriba y vuelve a pulsar «Olvidé mi contraseña».');return}
+  try{await sendPasswordResetEmail(auth,em)}catch(e){}
+  loginView('Si ese correo tiene cuenta, te enviamos un enlace para cambiar la contraseña.',true);
+}
+function verifyView(u){
+  $('#nav').hidden=$('#bell').hidden=$('#team').hidden=true;$('#out').hidden=false;$('#who').textContent=u.email;
+  $('#main').innerHTML=`<div class="card login"><h2 style="margin-top:0">Verifica tu correo</h2>
+  <p>Te enviamos un enlace a <b>${esc(u.email)}</b>. Ábrelo (revisa también spam) y luego pulsa el botón.</p>
+  <div class="add"><button class="btn" data-check="1">Ya verifiqué</button><button class="btn" style="background:var(--mut)" data-resend="1">Reenviar correo</button></div></div>`;
+}
+
+function teamView(){
+  const sd=spaceData||{},pid=sd.owner===me?sd.partner:sd.owner;
+  if(pid)return `<div class="card"><h2 style="margin-top:0">👥 Nuestro espacio</h2><p>Conectado con <b>${esc(nm(pid))}</b>. Solo ustedes dos pueden ver y editar esta información.</p></div>`;
+  return `<div class="card"><h2 style="margin-top:0">👥 Invitar a mi pareja</h2>
+  ${sd.invited?`<p>Invitación pendiente para <b>${esc(sd.invited)}</b>. Cuando esa persona entre, cree su cuenta con ese correo y acepte, quedarán conectados.</p>
+  <div class="add"><button class="btn" data-share="1">Enviar invitación</button><button class="btn" style="background:var(--mut)" data-uninvite="1">Cancelar invitación</button></div>
+  <p class="meta">Se abrirá WhatsApp, correo u otra app para mandarle el enlace.</p>`
+  :`<p>Escribe el correo de la otra persona. Solo esa cuenta podrá unirse.</p>
+  <div class="add"><input type="email" id="inv" placeholder="correo@ejemplo.com"><button class="btn" data-invite="1">Invitar</button></div>`}</div>`;
+}
+function sendInvite(){
+  const v=($('#inv').value||'').trim().toLowerCase();
+  if(!/^\S+@\S+\.\S+$/.test(v)||v===myEmail){toast('Escribe el correo de tu pareja (distinto al tuyo).');return}
+  updateDoc(doc(db,'space','main'),{invited:v}).catch(()=>toast('No se pudo guardar la invitación.'));
+}
+function shareInvite(){
+  const url=location.href.split('#')[0],em=spaceData.invited;
+  const txt=`Te invité a Nuestro Espacio 🌿. Entra aquí, crea tu cuenta con este correo (${em}), verifícalo y acepta la invitación: ${url}`;
+  if(navigator.share)navigator.share({title:'Nuestro Espacio',text:txt}).catch(()=>{});
+  else location.href='mailto:'+encodeURIComponent(em)+'?subject='+encodeURIComponent('Invitación a Nuestro Espacio')+'&body='+encodeURIComponent(txt);
+}
+async function doCreate(){
+  try{const b=writeBatch(db);
+    b.set(doc(db,'setup','state'),{owner:me,t:Date.now()});
+    b.set(doc(db,'space','main'),{owner:me,partner:null,invited:null});
+    await b.commit();stop();enter(auth.currentUser)}
+  catch(e){toast('No se pudo crear el espacio. ¿Publicaste las reglas de Firestore?')}
+}
+function render(){
+  if(!me)return;nav();if(!ready){$('#main').innerHTML='<div class="empty">Cargando…</div>';return}
+  const by=t=>items.filter(i=>i.type===t);let h='';
+  if(tab==='team'){h=teamView()}else if(tab==='shop'){
+    const s=by('shop'),p=s.filter(i=>!i.done),d=s.filter(i=>i.done);
+    h=`<div class="card"><div class="add"><input type="text" id="a1" placeholder="Producto (ej. Arroz)"><input class="q" type="text" id="a2" placeholder="Cant."><button class="btn" data-add="shop">Agregar</button></div></div>
+    <h2>Por comprar (${p.length})</h2><div class="card">${list(p,rowShop,'¡Lista vacía! 🛒')}</div>
+    ${d.length?`<h2>Ya comprados (${d.length})</h2><div class="card">${d.map(rowShop).join('')}<button class="btn" style="margin-top:8px;background:var(--red)" data-clear="1">Limpiar comprados</button></div>`:''}`;
+  }else if(tab==='notice'){
+    const n=by('notice').slice().reverse();
+    h=`<div class="card"><div class="add"><textarea id="a1" rows="2" placeholder="Escribe un aviso… (ej. Se acabó la leche)"></textarea></div>
+    <div class="add" style="margin-top:8px;align-items:center"><label class="meta"><input type="checkbox" id="a2"> 🚨 Urgente</label><span style="flex:1"></span><button class="btn" data-add="notice">Enviar aviso</button></div></div>
+    <h2>Mensajes</h2>${n.length?n.map(i=>`<div class="note${i.urgent?' urg':''}"><div>${i.urgent?'🚨 ':''}${esc(i.text)}</div><div class="meta">${esc(nm(i.by))} · ${fmt(i.ts)}${i.by===me?' '+del(i):''}</div></div>`).join(''):'<div class="empty">Sin avisos todavía 💌</div>'}`;
+  }else if(tab==='task'){
+    const t=by('task'),tp=t.filter(i=>!i.done),td=t.filter(i=>i.done);
+    const opts=(memberIds.length?memberIds:[me]).map(id=>`<option value="${id}"${id===me?' selected':''}>${esc(nm(id))}</option>`).join('');
+    h=`<div class="card"><div class="add"><input type="text" id="a1" placeholder="Nueva tarea"><select id="a2">${opts}</select><button class="btn" data-add="task">Asignar</button></div></div>
+    <h2>Pendientes (${tp.length})</h2><div class="card">${list(tp,rowTask,'Todo al día ✨')}</div>
+    ${td.length?`<h2>Terminadas (${td.length})</h2><div class="card">${td.map(rowTask).join('')}</div>`:''}`;
+  }else{
+    const r=by('rem').filter(i=>i.by===me||i.shared).sort((a,b)=>a.due-b.due),rp=r.filter(i=>!i.done),rd=r.filter(i=>i.done);
+    h=`<div class="card"><div class="add"><input type="text" id="a1" placeholder="Recordatorio (cita, reunión…)"><input type="datetime-local" id="a2"></div>
+    <div class="add" style="margin-top:8px;align-items:center"><label class="meta"><input type="checkbox" id="a3"> Compartir con mi pareja</label><span style="flex:1"></span><button class="btn" data-add="rem">Guardar</button></div></div>
+    <h2>Próximos (${rp.length})</h2><div class="card">${list(rp,rowRem,'Sin recordatorios ⏰')}</div>
+    ${rd.length?`<h2>Hechos</h2><div class="card">${rd.map(rowRem).join('')}</div>`:''}`;
+  }
+  const v=$('#a1')?.value;$('#main').innerHTML=h;if(v&&$('#a1')&&!editing)$('#a1').value=v;
+  if(editing){const e=$('#ed');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length)}}
+}
+
+function add(kind){
+  const a1=$('#a1'),txt=a1.value.trim();if(!txt)return;
+  const o={type:kind,text:txt,by:me,ts:Date.now(),done:false};
+  if(kind==='shop')o.qty=$('#a2').value.trim();
+  if(kind==='notice')o.urgent=$('#a2').checked;
+  if(kind==='task')o.to=$('#a2').value||me;
+  if(kind==='rem'){const v=$('#a2').value;if(!v){toast('Elige día y hora');return}o.due=new Date(v).getTime();o.shared=$('#a3').checked}
+  a1.value='';addDoc(collection(db,'items'),o).catch(()=>toast('No se pudo guardar. Revisa tu conexión.'));
+}
+$('#main').onclick=e=>{
+  const el=e.target.closest('[data-create],[data-accept],[data-retry],[data-invite],[data-share],[data-uninvite],[data-login],[data-mode],[data-reset],[data-check],[data-resend],[data-add],[data-tog],[data-del],[data-edit],[data-clear]');if(!el)return;const D=el.dataset;
+  if(el.tagName==='A')e.preventDefault();
+  if(D.create)doCreate();
+  else if(D.accept)updateDoc(doc(db,'space','main'),{partner:me}).catch(()=>toast('No se pudo aceptar la invitación.'));
+  else if(D.retry){stop();enter(auth.currentUser)}
+  else if(D.invite)sendInvite();
+  else if(D.share)shareInvite();
+  else if(D.uninvite)updateDoc(doc(db,'space','main'),{invited:null});
+  else if(D.login)doLogin();
+  else if(D.mode){mode=D.mode;loginView()}
+  else if(D.reset)doReset();
+  else if(D.resend){sendEmailVerification(auth.currentUser).then(()=>toast('Correo reenviado ✔')).catch(()=>toast('Espera un momento antes de reenviar.'))}
+  else if(D.check){(async()=>{try{await auth.currentUser.reload();if(auth.currentUser.emailVerified){await auth.currentUser.getIdToken(true);location.reload()}else toast('Aún no aparece verificado.')}catch(e){toast('No se pudo comprobar.')}})()}
+  else if(D.add)add(D.add);
+  else if(D.tog){const i=items.find(x=>x.id===D.tog);if(i)updateDoc(doc(db,'items',D.tog),{done:!i.done})}
+  else if(D.del)deleteDoc(doc(db,'items',D.del));
+  else if(D.edit){editing=D.edit;render()}
+  else if(D.clear)items.filter(x=>x.type==='shop'&&x.done).forEach(x=>deleteDoc(doc(db,'items',x.id)));
+};
+$('#main').addEventListener('keydown',e=>{
+  if(e.key!=='Enter'||e.target.tagName==='TEXTAREA')return;
+  if(e.target.id==='inv'){sendInvite();return}
+  if(e.target.id==='pw'||e.target.id==='em'){doLogin();return}
+  if(e.target.id==='ed'){e.target.blur();return}
+  const b=$('[data-add]');if(b&&e.target.closest('.add'))add(b.dataset.add);
+});
+$('#main').addEventListener('focusout',e=>{
+  if(e.target.id==='ed'){const id=e.target.dataset.id,v=e.target.value.trim();editing=null;if(v)updateDoc(doc(db,'items',id),{text:v});render()}
+});
+
+function checkReminders(){
+  if(!ready)return;const now=Date.now();
+  items.forEach(i=>{if(i.type==='rem'&&!i.done&&i.due<=now&&(i.by===me||i.shared)&&!fired[i.id]&&now-i.due<864e5){
+    fired[i.id]=1;localStorage.setItem('fired',JSON.stringify(fired));notify('⏰ Recordatorio: '+i.text)}});
+  render();
+}
+
+function stop(){unsubs.forEach(u=>u());unsubs=[];clearInterval(timer);ready=false;started=false;items=[];spaceData=null;me=null}
+function gate(title,body,btns){
+  $('#nav').hidden=$('#bell').hidden=$('#team').hidden=true;$('#out').hidden=false;$('#who').textContent=myEmail;
+  $('#main').innerHTML=`<div class="card login"><h2 style="margin-top:0">${title}</h2>${body}<div class="add">${btns}</div></div>`;
+}
+const gateCreate=()=>gate('Bienvenida/o 🌿','<p>Eres la primera persona en entrar. Crea tu espacio privado y después podrás invitar a tu pareja con su correo.</p>','<button class="btn" data-create="1">Crear nuestro espacio</button>');
+const gateInvite=()=>gate('Te invitaron 💌','<p>Te invitaron a <b>Nuestro Espacio</b>. Al aceptar, solo ustedes dos podrán ver y editar la información.</p>','<button class="btn" data-accept="1">Aceptar invitación</button>');
+const gatePrivate=()=>gate('Espacio privado 🔒',`<p>Este espacio ya tiene dueño y solo admite a la persona invitada. Pide que te inviten con este correo: <b>${esc(myEmail)}</b> y luego pulsa «Reintentar».</p>`,'<button class="btn" data-retry="1">Reintentar</button>');
+
+async function enter(u){
+  me=u.uid;myEmail=(u.email||'').toLowerCase();
+  try{const st=await getDoc(doc(db,'setup','state'));if(!st.exists()){gateCreate();return}}
+  catch(e){gatePrivate();return}
+  unsubs.push(onSnapshot(doc(db,'space','main'),snap=>{
+    if(!snap.exists()){gatePrivate();return}
+    spaceData=snap.data();
+    if(spaceData.owner===me||spaceData.partner===me){started?render():startApp()}
+    else if(spaceData.partner==null&&spaceData.invited===myEmail)gateInvite();
+    else gatePrivate();
+  },()=>gatePrivate()));
+}
+function startApp(){
+  started=true;$('#nav').hidden=$('#bell').hidden=$('#out').hidden=$('#team').hidden=false;
+  setDoc(doc(db,'members',me),{name:myEmail.split('@')[0]},{merge:true});
+  unsubs.push(onSnapshot(collection(db,'members'),s=>{
+    names={};memberIds=[];s.forEach(d=>{memberIds.push(d.id);names[d.id]=d.data().name});
+    const o=memberIds.find(id=>id!==me);$('#who').textContent=o?`Tú y ${names[o]}`:'Esperando a tu pareja…';render()}));
+  unsubs.push(onSnapshot(query(collection(db,'items'),orderBy('ts')),s=>{
+    if(ready)s.docChanges().forEach(c=>{
+      if(c.type!=='added'||c.doc.metadata.hasPendingWrites)return;const d=c.doc.data();if(d.by===me)return;
+      const w={shop:'agregó a la lista: ',notice:d.urgent?'🚨 ':'💌 ',task:d.to===me?'te asignó: ':'creó una tarea: ',rem:'compartió un recordatorio: '}[d.type];
+      notify(`${nm(d.by)} ${w}${d.text}`)});
+    items=s.docs.map(d=>({...d.data(),id:d.id}));
+    if(tab==='notice'&&ready){seen=Date.now();localStorage.setItem('seen',seen)}
+    ready=true;render();checkReminders()},()=>toast('Sin permiso o sin conexión con los datos.')));
+  timer=setInterval(checkReminders,20000);
+  render();
+}
+onAuthStateChanged(auth,u=>{
+  stop();
+  if(!u){loginView();return}
+  if(!u.emailVerified){verifyView(u);return}
+  enter(u);
+});
+</script>
+</body>
+</html>
