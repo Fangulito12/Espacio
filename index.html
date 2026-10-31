@@ -46,6 +46,7 @@ h2{font-size:.95rem;color:var(--mut);margin:16px 4px 8px;text-transform:uppercas
 a{color:var(--g)}
 .login{max-width:380px;margin:40px auto}.login .add{flex-direction:column}.login .add>*{flex:none}
 [hidden]{display:none!important}
+#qr{display:inline-block;background:#fff;padding:12px;border-radius:12px;min-height:60px}#qr img{display:block}
 #toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:12px 16px;border-radius:14px;z-index:20;max-width:92%;display:none;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 </style>
 </head>
@@ -76,9 +77,13 @@ const firebaseConfig = {
 };
 // =====================================================
 
+try{const q=new URLSearchParams(location.search);
+  if(q.get('s')&&q.get('c')){localStorage.setItem('join',JSON.stringify({s:q.get('s'),c:q.get('c')}));history.replaceState(null,'',location.pathname)}}catch(e){}
+const getJoin=()=>{try{return JSON.parse(localStorage.getItem('join')||'null')}catch(e){return null}};
+const clearJoin=()=>{try{localStorage.removeItem('join')}catch(e){}};
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const TABS=[['shop','🛒','Mercado'],['notice','💌','Avisos'],['task','✅','Tareas'],['rem','⏰','Recordar']];
-let S=null,pendingInv=null,myEmail='',spaceData=null,started=false,me=null,names={},memberIds=[],items=[],tab='shop',ready=false,editing=null,unsubs=[],timer=null;
+let S=null,curCode=null,pendingInv=null,myEmail='',spaceData=null,started=false,me=null,names={},memberIds=[],items=[],tab='shop',ready=false,editing=null,unsubs=[],timer=null;
 let seen=+(localStorage.getItem('seen')||0),fired={};
 try{fired=JSON.parse(localStorage.getItem('fired')||'{}')}catch(e){}
 const $=s=>document.querySelector(s);
@@ -147,7 +152,43 @@ function verifyView(u){
   <div class="add"><button class="btn" data-check="1">Ya verifiqué</button><button class="btn" style="background:var(--mut)" data-resend="1">Reenviar correo</button></div></div>`;
 }
 
-function teamView(){
+const rnd=n=>{const a=new Uint8Array(n);crypto.getRandomValues(a);return Array.from(a,x=>'abcdefghijkmnpqrstuvwxyz23456789'[x%32]).join('')};
+const codeUrl=()=>location.origin+location.pathname+'?s='+S+'&c='+curCode.token;
+function qrCard(){
+  const live=curCode&&curCode.exp>Date.now();
+  return `<div class="card"><h2 style="margin-top:0">📷 Invitar con código QR</h2>`+(live
+   ?`<div style="text-align:center"><div id="qr"></div></div><p class="meta">Válido por 2 horas y de un solo uso. Muéstraselo solo a tu pareja.</p>
+   <div class="add"><button class="btn" data-qrshare="1">Compartir enlace</button><button class="btn" style="background:var(--mut)" data-qrcancel="1">Cancelar código</button></div>`
+   :`<p>Genera un código y que tu pareja lo escanee con la cámara de su celular. Sirve una sola vez.</p><div class="add"><button class="btn" data-qr="1">Generar código QR</button></div>`)+`</div>`;
+}
+function loadQR(){return window.QRCode?Promise.resolve():new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';sc.onload=ok;sc.onerror=no;document.head.appendChild(sc)})}
+async function drawQR(){
+  const el=$('#qr');if(!el||!curCode)return;
+  try{await loadQR();el.innerHTML='';new QRCode(el,{text:codeUrl(),width:210,height:210,correctLevel:QRCode.CorrectLevel.M})}
+  catch(e){el.innerHTML='<span class="meta" style="color:#333">No se pudo dibujar el QR. Usa «Compartir enlace».</span>'}
+}
+async function makeCode(){
+  const token=rnd(24),exp=Date.now()+2*3600*1000;
+  try{await setDoc(doc(db,'codes',token),{spaceId:S,exp});curCode={token,exp};render()}
+  catch(e){toast('No se pudo generar el código.')}
+}
+function cancelCode(){if(curCode)deleteDoc(doc(db,'codes',curCode.token)).catch(()=>{});curCode=null;render()}
+function shareCode(){
+  const txt='Te invité a Nuestro Espacio 🌿. Abre este enlace, entra o crea tu cuenta y acepta: '+codeUrl();
+  if(navigator.share)navigator.share({title:'Nuestro Espacio',text:txt}).catch(()=>{});
+  else{try{navigator.clipboard.writeText(codeUrl());toast('Enlace copiado')}catch(e){toast(codeUrl())}}
+}
+async function doAcceptCode(){
+  const j=getJoin();if(!j)return;
+  try{const b=writeBatch(db);
+    b.update(doc(db,'spaces',j.s),{partner:me});
+    b.set(doc(db,'users',me),{spaceId:j.s,email:myEmail,code:j.c});
+    b.delete(doc(db,'codes',j.c));
+    await b.commit();clearJoin();stop();enter(auth.currentUser)}
+  catch(e){toast('El código no es válido o ya venció. Pide uno nuevo.')}
+}
+function teamView(){const t=teamView0(),sd=spaceData||{};return(sd.partner||sd.owner!==me)?t:t+qrCard()}
+function teamView0(){
   const sd=spaceData||{},pid=sd.owner===me?sd.partner:sd.owner;
   if(pid)return `<div class="card"><h2 style="margin-top:0">👥 Nuestro espacio</h2><p>Conectado con <b>${esc(nm(pid))}</b>. Solo ustedes dos pueden ver y editar esta información.</p></div>`;
   return `<div class="card"><h2 style="margin-top:0">👥 Invitar a mi pareja</h2>
@@ -220,6 +261,7 @@ function render(){
     ${rd.length?`<h2>Hechos</h2><div class="card">${rd.map(rowRem).join('')}</div>`:''}`;
   }
   const v=$('#a1')?.value;$('#main').innerHTML=h;if(v&&$('#a1')&&!editing)$('#a1').value=v;
+  if(tab==='team'&&curCode)drawQR();
   if(editing){const e=$('#ed');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length)}}
 }
 
@@ -233,9 +275,13 @@ function add(kind){
   a1.value='';addDoc(collection(db,'spaces',S,'items'),o).catch(()=>toast('No se pudo guardar. Revisa tu conexión.'));
 }
 $('#main').onclick=e=>{
-  const el=e.target.closest('[data-create],[data-accept],[data-retry],[data-invite],[data-share],[data-uninvite],[data-login],[data-mode],[data-reset],[data-check],[data-resend],[data-add],[data-tog],[data-del],[data-edit],[data-clear]');if(!el)return;const D=el.dataset;
+  const el=e.target.closest('[data-create],[data-accept],[data-acceptcode],[data-qr],[data-qrshare],[data-qrcancel],[data-retry],[data-invite],[data-share],[data-uninvite],[data-login],[data-mode],[data-reset],[data-check],[data-resend],[data-add],[data-tog],[data-del],[data-edit],[data-clear]');if(!el)return;const D=el.dataset;
   if(el.tagName==='A')e.preventDefault();
   if(D.create)doCreate();
+  else if(D.acceptcode)doAcceptCode();
+  else if(D.qr)makeCode();
+  else if(D.qrshare)shareCode();
+  else if(D.qrcancel)cancelCode();
   else if(D.accept)doAccept();
   else if(D.retry){stop();enter(auth.currentUser)}
   else if(D.invite)sendInvite();
@@ -270,27 +316,30 @@ function checkReminders(){
   render();
 }
 
-function stop(){unsubs.forEach(u=>u());unsubs=[];clearInterval(timer);ready=false;started=false;items=[];spaceData=null;S=null;pendingInv=null;me=null}
+function stop(){unsubs.forEach(u=>u());unsubs=[];clearInterval(timer);ready=false;started=false;items=[];spaceData=null;S=null;pendingInv=null;curCode=null;me=null}
 function gate(title,body,btns){
   $('#nav').hidden=$('#bell').hidden=$('#team').hidden=true;$('#out').hidden=false;$('#who').textContent=myEmail;
   $('#main').innerHTML=`<div class="card login"><h2 style="margin-top:0">${title}</h2>${body}<div class="add">${btns}</div></div>`;
 }
 const gateErr=()=>gate('No se pudo cargar','<p>Revisa tu conexión y que las reglas de Firestore estén publicadas.</p>','<button class="btn" data-retry="1">Reintentar</button>');
-function gateWelcome(inv){
-  gate('Bienvenida/o 🌿',
-    inv?`<p><b>${esc(inv.fromEmail)}</b> te invitó a su espacio. Puedes unirte o crear tu propio espacio.</p>`
-       :'<p>Crea tu espacio privado para organizarte con tu pareja. Después podrás invitarla con su correo.</p>',
-    (inv?'<button class="btn" data-accept="1">Aceptar invitación</button>':'')
-    +`<button class="btn"${inv?' style="background:var(--mut)"':''} data-create="1">Crear mi propio espacio</button>`);
+function gateWelcome(inv,jn){
+  const msg=jn?'<p>Te invitaron con un código QR a un espacio compartido. Puedes unirte o crear tu propio espacio.</p>'
+    :inv?`<p><b>${esc(inv.fromEmail)}</b> te invitó a su espacio. Puedes unirte o crear tu propio espacio.</p>`
+    :'<p>Crea tu espacio privado para organizarte con tu pareja. Después podrás invitarla con su correo o con un código QR.</p>';
+  const any=jn||inv;
+  gate('Bienvenida/o 🌿',msg,
+    (jn?'<button class="btn" data-acceptcode="1">Unirme con el código</button>':'')
+    +(inv&&!jn?'<button class="btn" data-accept="1">Aceptar invitación</button>':'')
+    +`<button class="btn"${any?' style="background:var(--mut)"':''} data-create="1">Crear mi propio espacio</button>`);
 }
 async function enter(u){
   me=u.uid;myEmail=(u.email||'').toLowerCase();
   try{
     const us=await getDoc(doc(db,'users',me));
-    if(us.exists()){S=us.data().spaceId;watchSpace();return}
+    if(us.exists()){clearJoin();S=us.data().spaceId;watchSpace();return}
     const iv=await getDoc(doc(db,'invites',myEmail));
     pendingInv=iv.exists()?iv.data():null;
-    gateWelcome(pendingInv);
+    gateWelcome(pendingInv,getJoin());
   }catch(e){gateErr()}
 }
 function watchSpace(){
