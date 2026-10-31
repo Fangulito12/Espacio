@@ -44,7 +44,8 @@ h2{font-size:.95rem;color:var(--mut);margin:16px 4px 8px;text-transform:uppercas
 .note{border-left:4px solid var(--g);padding:8px 10px;margin:8px 0;background:var(--g2);border-radius:0 10px 10px 0}
 .note.urg{border-color:var(--red)}
 a{color:var(--g)}
-.login{max-width:380px;margin:40px auto}.login .add{flex-direction:column}
+.login{max-width:380px;margin:40px auto}.login .add{flex-direction:column}.login .add>*{flex:none}
+[hidden]{display:none!important}
 #toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:12px 16px;border-radius:14px;z-index:20;max-width:92%;display:none;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 </style>
 </head>
@@ -66,12 +67,12 @@ import {getFirestore,collection,doc,getDoc,writeBatch,setDoc,addDoc,updateDoc,de
 
 // ====== PEGA AQUI TU CONFIGURACION DE FIREBASE ======
 const firebaseConfig = {
-  apiKey: "PEGA_AQUI",
-  authDomain: "PEGA_AQUI",
-  projectId: "PEGA_AQUI",
-  storageBucket: "PEGA_AQUI",
-  messagingSenderId: "PEGA_AQUI",
-  appId: "PEGA_AQUI"
+  apiKey: "AIzaSyB31uzZ-_M_E-lF0f41uZ6bC-X4h5fZB7I",
+  authDomain: "espacio-17f63.firebaseapp.com",
+  projectId: "espacio-17f63",
+  storageBucket: "espacio-17f63.firebasestorage.app",
+  messagingSenderId: "879392677121",
+  appId: "1:879392677121:web:5da34a4dc66b06f425cf00"
 };
 // =====================================================
 
