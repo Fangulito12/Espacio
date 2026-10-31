@@ -54,7 +54,7 @@ a{color:var(--g)}
 <div id="toast"></div>
 <header>
   <h1>🌿 Compras y Avisos<small id="who"></small></h1>
-  <button class="hb" id="team" title="Mi pareja" hidden>👥</button>
+  <button class="hb" id="team" title="Avisos" hidden>👥</button>
   <button class="hb" id="bell" title="Activar notificaciones" hidden>🔔</button>
   <button class="hb" id="out" title="Salir" hidden>⎋</button>
 </header>
@@ -88,7 +88,7 @@ let seen=+(localStorage.getItem('seen')||0),fired={};
 try{fired=JSON.parse(localStorage.getItem('fired')||'{}')}catch(e){}
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const nm=id=>id===me?'Tú':(names[id]||'Tu pareja');
+const nm=id=>id===me?'Tú':(names[id]||'Tu invitado');
 const fmt=t=>new Date(t).toLocaleString('es',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
 function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',5000)}
 async function notify(m){
@@ -157,7 +157,7 @@ const codeUrl=()=>location.origin+location.pathname+'?s='+S+'&c='+curCode.token;
 function qrCard(){
   const live=curCode&&curCode.exp>Date.now();
   return `<div class="card"><h2 style="margin-top:0">📷 Invitar con código QR</h2>`+(live
-   ?`<div style="text-align:center"><div id="qr"></div></div><p class="meta">Válido por 2 horas y de un solo uso. Muéstraselo solo a tu pareja.</p>
+   ?`<div style="text-align:center"><div id="qr"></div></div><p class="meta">Válido por 2 horas y de un solo uso.</p>
    <div class="add"><button class="btn" data-qrshare="1">Compartir enlace</button><button class="btn" style="background:var(--mut)" data-qrcancel="1">Cancelar código</button></div>`
    :`<p>Genera un código y que lo escanee con la cámara de su celular. Sirve una sola vez.</p><div class="add"><button class="btn" data-qr="1">Generar código QR</button></div>`)+`</div>`;
 }
@@ -200,7 +200,7 @@ function teamView0(){
 }
 function sendInvite(){
   const v=($('#inv').value||'').trim().toLowerCase();
-  if(!/^\S+@\S+\.\S+$/.test(v)||v===myEmail){toast('Escribe el correo de tu pareja (distinto al tuyo).');return}
+  if(!/^\S+@\S+\.\S+$/.test(v)||v===myEmail){toast('Escribe el correo (distinto al tuyo).');return}
   const b=writeBatch(db),old=spaceData&&spaceData.invited;
   b.update(doc(db,'spaces',S),{invited:v});
   if(old&&old!==v)b.delete(doc(db,'invites',old));
@@ -224,7 +224,7 @@ async function doCreate(){
     b.set(doc(db,'spaces',me),{owner:me,partner:null,invited:null,ownerEmail:myEmail,t:Date.now()});
     b.set(doc(db,'users',me),{spaceId:me,email:myEmail});
     await b.commit();stop();enter(auth.currentUser)}
-  catch(e){toast('No se pudo crear el espacio. ¿Publicaste las reglas nuevas de Firestore?')}
+  catch(e){toast('No se pudo crear el Compras y Avisos. ¿Publicaste las reglas nuevas de Firestore?')}
 }
 async function doAccept(){
   try{const sid=pendingInv.spaceId,b=writeBatch(db);
@@ -323,14 +323,14 @@ function gate(title,body,btns){
 }
 const gateErr=()=>gate('No se pudo cargar','<p>Revisa tu conexión y que las reglas de Firestore estén publicadas.</p>','<button class="btn" data-retry="1">Reintentar</button>');
 function gateWelcome(inv,jn){
-  const msg=jn?'<p>Te invitaron con un código QR a un espacio compartido. Puedes unirte o crear tu propio espacio.</p>'
-    :inv?`<p><b>${esc(inv.fromEmail)}</b> te invitó a su espacio. Puedes unirte o crear tu propio espacio.</p>`
-    :'<p>Crea tu espacio privado para organizarte con tu pareja. Después podrás invitarla con su correo o con un código QR.</p>';
+  const msg=jn?'<p>Te invitaron con un código QR a un Compras y Avisos compartido. Puedes unirte o crear tu propio Compras y Avisos.</p>'
+    :inv?`<p><b>${esc(inv.fromEmail)}</b> te invitó a su Compras y Avisos. Puedes unirte o crear tu propio Compras y Avisos.</p>`
+    :'<p>Crea tu Compras y Avisos privado para organizarte. Después podrás invitarle con su correo o con un código QR.</p>';
   const any=jn||inv;
   gate('Bienvenida/o 🌿',msg,
     (jn?'<button class="btn" data-acceptcode="1">Unirme con el código</button>':'')
     +(inv&&!jn?'<button class="btn" data-accept="1">Aceptar invitación</button>':'')
-    +`<button class="btn"${any?' style="background:var(--mut)"':''} data-create="1">Crear mi propio espacio</button>`);
+    +`<button class="btn"${any?' style="background:var(--mut)"':''} data-create="1">Crear mi propio Compras y Avisos</button>`);
 }
 async function enter(u){
   me=u.uid;myEmail=(u.email||'').toLowerCase();
