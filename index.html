@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#1f9d55">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg">
-<title>Nuestro Espacio</title>
+<title>Compras y Avisos</title>
 <style>
 :root{--bg:#f3faf5;--card:#fff;--tx:#16301f;--mut:#69846f;--g:#1f9d55;--gd:#17803f;--g2:#e2f4e8;--bd:#d6e9dc;--red:#d64545;color-scheme:light}
 @media (prefers-color-scheme:dark){:root{--bg:#0d1912;--card:#15261c;--tx:#e5f4ea;--mut:#8cab97;--g:#34c070;--gd:#2aa75f;--g2:#1b3526;--bd:#25402f;color-scheme:dark}}
@@ -53,7 +53,7 @@ a{color:var(--g)}
 <body>
 <div id="toast"></div>
 <header>
-  <h1>🌿 Nuestro Espacio<small id="who"></small></h1>
+  <h1>🌿 Compras y Avisos<small id="who"></small></h1>
   <button class="hb" id="team" title="Mi pareja" hidden>👥</button>
   <button class="hb" id="bell" title="Activar notificaciones" hidden>🔔</button>
   <button class="hb" id="out" title="Salir" hidden>⎋</button>
@@ -82,7 +82,7 @@ try{const q=new URLSearchParams(location.search);
 const getJoin=()=>{try{return JSON.parse(localStorage.getItem('join')||'null')}catch(e){return null}};
 const clearJoin=()=>{try{localStorage.removeItem('join')}catch(e){}};
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
-const TABS=[['shop','🛒','Mercado'],['notice','💌','Avisos'],['task','✅','Tareas'],['rem','⏰','Recordar']];
+const TABS=[['shop','🛒','Mercado'],['notice','💬','Avisos'],['task','✅','Tareas'],['rem','⏰','Recordar']];
 let S=null,curCode=null,pendingInv=null,myEmail='',spaceData=null,started=false,me=null,names={},memberIds=[],items=[],tab='shop',ready=false,editing=null,unsubs=[],timer=null;
 let seen=+(localStorage.getItem('seen')||0),fired={};
 try{fired=JSON.parse(localStorage.getItem('fired')||'{}')}catch(e){}
@@ -94,7 +94,7 @@ function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';cl
 async function notify(m){
   toast(m);
   try{if(Notification.permission==='granted'){const r=await navigator.serviceWorker.getRegistration();
-    r?r.showNotification('Nuestro Espacio',{body:m,icon:'icon.svg'}):new Notification('Nuestro Espacio',{body:m})}}catch(e){}
+    r?r.showNotification('Compras y Avisos',{body:m,icon:'icon.svg'}):new Notification('Compras y Avisos',{body:m})}}catch(e){}
   try{navigator.vibrate&&navigator.vibrate(120)}catch(e){}
 }
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
@@ -159,7 +159,7 @@ function qrCard(){
   return `<div class="card"><h2 style="margin-top:0">📷 Invitar con código QR</h2>`+(live
    ?`<div style="text-align:center"><div id="qr"></div></div><p class="meta">Válido por 2 horas y de un solo uso. Muéstraselo solo a tu pareja.</p>
    <div class="add"><button class="btn" data-qrshare="1">Compartir enlace</button><button class="btn" style="background:var(--mut)" data-qrcancel="1">Cancelar código</button></div>`
-   :`<p>Genera un código y que tu pareja lo escanee con la cámara de su celular. Sirve una sola vez.</p><div class="add"><button class="btn" data-qr="1">Generar código QR</button></div>`)+`</div>`;
+   :`<p>Genera un código y que lo escanee con la cámara de su celular. Sirve una sola vez.</p><div class="add"><button class="btn" data-qr="1">Generar código QR</button></div>`)+`</div>`;
 }
 function loadQR(){return window.QRCode?Promise.resolve():new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';sc.onload=ok;sc.onerror=no;document.head.appendChild(sc)})}
 async function drawQR(){
@@ -174,8 +174,8 @@ async function makeCode(){
 }
 function cancelCode(){if(curCode)deleteDoc(doc(db,'codes',curCode.token)).catch(()=>{});curCode=null;render()}
 function shareCode(){
-  const txt='Te invité a Nuestro Espacio 🌿. Abre este enlace, entra o crea tu cuenta y acepta: '+codeUrl();
-  if(navigator.share)navigator.share({title:'Nuestro Espacio',text:txt}).catch(()=>{});
+  const txt='Te invité a Compras y Avisos 🌿. Abre este enlace, entra o crea tu cuenta y acepta: '+codeUrl();
+  if(navigator.share)navigator.share({title:'Compras y Avisos',text:txt}).catch(()=>{});
   else{try{navigator.clipboard.writeText(codeUrl());toast('Enlace copiado')}catch(e){toast(codeUrl())}}
 }
 async function doAcceptCode(){
@@ -190,8 +190,8 @@ async function doAcceptCode(){
 function teamView(){const t=teamView0(),sd=spaceData||{};return(sd.partner||sd.owner!==me)?t:t+qrCard()}
 function teamView0(){
   const sd=spaceData||{},pid=sd.owner===me?sd.partner:sd.owner;
-  if(pid)return `<div class="card"><h2 style="margin-top:0">👥 Nuestro espacio</h2><p>Conectado con <b>${esc(nm(pid))}</b>. Solo ustedes dos pueden ver y editar esta información.</p></div>`;
-  return `<div class="card"><h2 style="margin-top:0">👥 Invitar a mi pareja</h2>
+  if(pid)return `<div class="card"><h2 style="margin-top:0">👥 Compras y Avisos</h2><p>Conectado con <b>${esc(nm(pid))}</b>. Solo ustedes dos pueden ver y editar esta información.</p></div>`;
+  return `<div class="card"><h2 style="margin-top:0">👥 Invitar</h2>
   ${sd.invited?`<p>Invitación pendiente para <b>${esc(sd.invited)}</b>. Cuando esa persona entre, cree su cuenta con ese correo y acepte, quedarán conectados.</p>
   <div class="add"><button class="btn" data-share="1">Enviar invitación</button><button class="btn" style="background:var(--mut)" data-uninvite="1">Cancelar invitación</button></div>
   <p class="meta">Se abrirá WhatsApp, correo u otra app para mandarle el enlace.</p>`
@@ -215,9 +215,9 @@ function unInvite(){
 }
 function shareInvite(){
   const url=location.href.split('#')[0],em=spaceData.invited;
-  const txt=`Te invité a Nuestro Espacio 🌿. Entra aquí, crea tu cuenta con este correo (${em}), verifícalo y acepta la invitación: ${url}`;
-  if(navigator.share)navigator.share({title:'Nuestro Espacio',text:txt}).catch(()=>{});
-  else location.href='mailto:'+encodeURIComponent(em)+'?subject='+encodeURIComponent('Invitación a Nuestro Espacio')+'&body='+encodeURIComponent(txt);
+  const txt=`Te invité a Compras y Avisos 🌿. Entra aquí, crea tu cuenta con este correo (${em}), verifícalo y acepta la invitación: ${url}`;
+  if(navigator.share)navigator.share({title:'Compras y Avisos',text:txt}).catch(()=>{});
+  else location.href='mailto:'+encodeURIComponent(em)+'?subject='+encodeURIComponent('Invitación a Compras y Avisos')+'&body='+encodeURIComponent(txt);
 }
 async function doCreate(){
   try{const b=writeBatch(db);
@@ -239,14 +239,14 @@ function render(){
   const by=t=>items.filter(i=>i.type===t);let h='';
   if(tab==='team'){h=teamView()}else if(tab==='shop'){
     const s=by('shop'),p=s.filter(i=>!i.done),d=s.filter(i=>i.done);
-    h=`<div class="card"><div class="add"><input type="text" id="a1" placeholder="Producto (ej. Arroz)"><input class="q" type="text" id="a2" placeholder="Cant."><button class="btn" data-add="shop">Agregar</button></div></div>
+    h=`<div class="card"><div class="add"><input type="text" id="a1" placeholder="Producto"><input class="q" type="text" id="a2" placeholder="Cant."><button class="btn" data-add="shop">Agregar</button></div></div>
     <h2>Por comprar (${p.length})</h2><div class="card">${list(p,rowShop,'¡Lista vacía! 🛒')}</div>
     ${d.length?`<h2>Ya comprados (${d.length})</h2><div class="card">${d.map(rowShop).join('')}<button class="btn" style="margin-top:8px;background:var(--red)" data-clear="1">Limpiar comprados</button></div>`:''}`;
   }else if(tab==='notice'){
     const n=by('notice').slice().reverse();
-    h=`<div class="card"><div class="add"><textarea id="a1" rows="2" placeholder="Escribe un aviso… (ej. Se acabó la leche)"></textarea></div>
+    h=`<div class="card"><div class="add"><textarea id="a1" rows="2" placeholder="Escribe un aviso…"></textarea></div>
     <div class="add" style="margin-top:8px;align-items:center"><label class="meta"><input type="checkbox" id="a2"> 🚨 Urgente</label><span style="flex:1"></span><button class="btn" data-add="notice">Enviar aviso</button></div></div>
-    <h2>Mensajes</h2>${n.length?n.map(i=>`<div class="note${i.urgent?' urg':''}"><div>${i.urgent?'🚨 ':''}${esc(i.text)}</div><div class="meta">${esc(nm(i.by))} · ${fmt(i.ts)}${i.by===me?' '+del(i):''}</div></div>`).join(''):'<div class="empty">Sin avisos todavía 💌</div>'}`;
+    <h2>Mensajes</h2>${n.length?n.map(i=>`<div class="note${i.urgent?' urg':''}"><div>${i.urgent?'🚨 ':''}${esc(i.text)}</div><div class="meta">${esc(nm(i.by))} · ${fmt(i.ts)}${i.by===me?' '+del(i):''}</div></div>`).join(''):'<div class="empty">Sin avisos todavía 💬</div>'}`;
   }else if(tab==='task'){
     const t=by('task'),tp=t.filter(i=>!i.done),td=t.filter(i=>i.done);
     const opts=(memberIds.length?memberIds:[me]).map(id=>`<option value="${id}"${id===me?' selected':''}>${esc(nm(id))}</option>`).join('');
@@ -256,7 +256,7 @@ function render(){
   }else{
     const r=by('rem').filter(i=>i.by===me||i.shared).sort((a,b)=>a.due-b.due),rp=r.filter(i=>!i.done),rd=r.filter(i=>i.done);
     h=`<div class="card"><div class="add"><input type="text" id="a1" placeholder="Recordatorio (cita, reunión…)"><input type="datetime-local" id="a2"></div>
-    <div class="add" style="margin-top:8px;align-items:center"><label class="meta"><input type="checkbox" id="a3"> Compartir con mi pareja</label><span style="flex:1"></span><button class="btn" data-add="rem">Guardar</button></div></div>
+    <div class="add" style="margin-top:8px;align-items:center"><label class="meta"><input type="checkbox" id="a3"> Compartir</label><span style="flex:1"></span><button class="btn" data-add="rem">Guardar</button></div></div>
     <h2>Próximos (${rp.length})</h2><div class="card">${list(rp,rowRem,'Sin recordatorios ⏰')}</div>
     ${rd.length?`<h2>Hechos</h2><div class="card">${rd.map(rowRem).join('')}</div>`:''}`;
   }
@@ -355,11 +355,11 @@ function startApp(){
   setDoc(doc(db,'spaces',S,'members',me),{name:myEmail.split('@')[0]},{merge:true});
   unsubs.push(onSnapshot(collection(db,'spaces',S,'members'),s=>{
     names={};memberIds=[];s.forEach(d=>{memberIds.push(d.id);names[d.id]=d.data().name});
-    const o=memberIds.find(id=>id!==me);$('#who').textContent=o?`Tú y ${names[o]}`:'Esperando a tu pareja…';render()}));
+    const o=memberIds.find(id=>id!==me);$('#who').textContent=o?`Tú y ${names[o]}`:'Esperando...…';render()}));
   unsubs.push(onSnapshot(query(collection(db,'spaces',S,'items'),orderBy('ts')),s=>{
     if(ready)s.docChanges().forEach(c=>{
       if(c.type!=='added'||c.doc.metadata.hasPendingWrites)return;const d=c.doc.data();if(d.by===me)return;
-      const w={shop:'agregó a la lista: ',notice:d.urgent?'🚨 ':'💌 ',task:d.to===me?'te asignó: ':'creó una tarea: ',rem:'compartió un recordatorio: '}[d.type];
+      const w={shop:'agregó a la lista: ',notice:d.urgent?'🚨 ':'💬 ',task:d.to===me?'te asignó: ':'creó una tarea: ',rem:'compartió un recordatorio: '}[d.type];
       notify(`${nm(d.by)} ${w}${d.text}`)});
     items=s.docs.map(d=>({...d.data(),id:d.id}));
     if(tab==='notice'&&ready){seen=Date.now();localStorage.setItem('seen',seen)}
